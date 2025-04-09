@@ -10,6 +10,8 @@
     />
     <link rel="shortcut icon" href="nexus_logo.png" type="image/x-icon" />
     <style>
+      @import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
+
       :root {
         --primary: #1a1a1a;
         --secondary: #2d2d2d;
@@ -21,6 +23,7 @@
 
       * {
         box-sizing: border-box;
+        font-family: "Poppins", sans-serif;
       }
 
       body {
@@ -105,6 +108,76 @@
         cursor: pointer;
       }
 
+      #taskModal button {
+        margin-top: 10px;
+        font-weight: bold;
+        border-radius: 8px;
+      }
+
+      #taskModal .form-group label {
+        display: block;
+        margin-bottom: 5px;
+      }
+
+      #taskModal #modalTitle {
+        margin-top: 0;
+        margin-bottom: 20px; /* adjust as needed */
+        font-size: 1.4em;
+      }
+
+      #taskModal .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 18px;
+      }
+
+      #taskModal .form-group label {
+        font-size: 0.95em;
+        color: #ccc;
+      }
+
+      #taskModal input,
+      #taskModal select,
+      #taskModal textarea {
+        padding: 10px;
+        font-size: 0.95em;
+        border-radius: 8px;
+      }
+
+      #taskModal textarea {
+        min-height: 80px;
+        resize: vertical;
+      }
+
+      .color-picker {
+        width: 36px;
+        height: 36px;
+        border: 1px solid #555;
+        border-radius: 6px;
+        background-color: transparent;
+        padding: 0;
+        margin-right: 10px;
+        cursor: pointer;
+        appearance: none;
+        -webkit-appearance: none;
+        transition: border 0.2s ease;
+      }
+
+      .color-picker:hover {
+        border-color: var(--accent);
+      }
+
+      .color-picker::-webkit-color-swatch-wrapper {
+        padding: 0;
+        border-radius: 6px;
+      }
+
+      .color-picker::-webkit-color-swatch {
+        border: none;
+        border-radius: 6px;
+      }
+
       .modal {
         display: none;
         position: fixed;
@@ -113,11 +186,13 @@
         transform: translate(-50%, -50%);
         background: rgba(40, 40, 40, 0.9);
         backdrop-filter: blur(10px);
-        padding: 35px 30px;
         border-radius: 16px;
         width: 360px;
         max-width: 90%;
         z-index: 1000;
+        padding: 25px 30px;
+        border-radius: 20px;
+        width: 400px;
       }
 
       .modal-overlay {
@@ -144,6 +219,7 @@
         color: white;
         border: none;
         border-radius: 6px;
+        resize: none;
       }
 
       .subject-item,
@@ -250,6 +326,43 @@
         background: var(--accent) !important;
         box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
         transition: background 0.5s ease;
+      }
+
+      .side-task-card {
+        background: #1f1f1f;
+        padding: 10px 12px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        border-left: 5px solid var(--accent);
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      }
+
+      .side-task-card .task-title {
+        font-weight: bold;
+        color: var(--text);
+        margin-bottom: 4px;
+      }
+
+      .side-task-card .task-date {
+        font-size: 0.85em;
+        color: #ccc;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .side-task-card .due-in {
+        color: var(--accent);
+      }
+
+      .side-task-card.today-highlight {
+        border: 2px solid var(--danger);
+        background: #2a1a1a;
+      }
+
+      .side-task-card .today-alert {
+        color: var(--danger);
+        font-weight: bold;
       }
     </style>
   </head>
@@ -414,30 +527,104 @@
         populateDropdown("taskType", types);
       }
 
+      function editSubject(name) {
+        const subject = subjects.find((s) => s.name === name);
+        if (!subject) return;
+
+        const newName = prompt("Edit subject name:", subject.name);
+        const newColor = prompt("Edit color (hex code):", subject.color);
+
+        if (!newName || !newColor) return;
+
+        subject.name = newName.trim();
+        subject.color = newColor;
+        localStorage.setItem("subjects", JSON.stringify(subjects));
+        renderSubjects();
+        populateDropdown("taskSubject", subjects);
+        renderTasks();
+        updateCounters();
+      }
+
+      function editType(name) {
+        const type = types.find((t) => t.name === name);
+        if (!type) return;
+
+        const newName = prompt("Edit type name:", type.name);
+        const newColor = prompt("Edit color (hex code):", type.color);
+
+        if (!newName || !newColor) return;
+
+        type.name = newName.trim();
+        type.color = newColor;
+        localStorage.setItem("types", JSON.stringify(types));
+        renderTypes();
+        populateDropdown("taskType", types);
+        renderTasks();
+        updateCounters();
+      }
+
       function renderSubjects() {
         document.getElementById("subjectsList").innerHTML = subjects
           .map(
-            (s) => `
-            <div class="subject-item">
-                <span style="color:${s.color}">${s.name}</span>
-                <button onclick="deleteSubject('${s.name}')">Delete</button>
-            </div>`
+            (s, index) => `
+      <div class="subject-item">
+        <input type="text" value="${s.name}" 
+               onchange="updateSubjectName(${index}, this.value)"
+               style="flex:1; background:transparent; color:${s.color}; border:none; font-weight:bold; margin-right: 10px; font-size:1em" />
+        <input type="color" class="color-picker" value="${s.color}" onchange="updateSubjectColor(${index}, this.value)" />
+        <button onclick="deleteSubject('${s.name}')">Delete</button>
+      </div>`
           )
           .join("");
       }
-
       function renderTypes() {
         document.getElementById("typesList").innerHTML = types
           .map(
-            (t) => `
-            <div class="type-item">
-                <span style="color:${t.color}">${t.name}</span>
-                <button onclick="deleteType('${t.name}')">Delete</button>
-            </div>`
+            (t, index) => `
+      <div class="type-item">
+        <input type="text" value="${t.name}" 
+               onchange="updateTypeName(${index}, this.value)"
+               style="flex:1; background:transparent; color:${t.color}; border:none; font-weight:bold; margin-right: 10px; font-size:1em"  />
+        <input type="color" class="color-picker" value="${t.color}" 
+               onchange="updateTypeColor(${index}, this.value)"
+               style="width: 40px; height: 40px; cursor: pointer;" />
+        <button onclick="deleteType('${t.name}')">Delete</button>
+      </div>`
           )
           .join("");
-      }
 
+        function updateSubjectName(index, newName) {
+          if (!newName.trim()) return;
+          subjects[index].name = newName.trim();
+          localStorage.setItem("subjects", JSON.stringify(subjects));
+          populateDropdown("taskSubject", subjects);
+          renderSubjects();
+          renderTasks();
+        }
+
+        function updateSubjectColor(index, newColor) {
+          subjects[index].color = newColor;
+          localStorage.setItem("subjects", JSON.stringify(subjects));
+          renderSubjects();
+          renderTasks();
+        }
+
+        function updateTypeName(index, newName) {
+          if (!newName.trim()) return;
+          types[index].name = newName.trim();
+          localStorage.setItem("types", JSON.stringify(types));
+          populateDropdown("taskType", types);
+          renderTypes();
+          renderTasks();
+        }
+
+        function updateTypeColor(index, newColor) {
+          types[index].color = newColor;
+          localStorage.setItem("types", JSON.stringify(types));
+          renderTypes();
+          renderTasks();
+        }
+      }
       function saveTask() {
         const id = document.getElementById("taskId").value;
         const subject = document.getElementById("taskSubject").value;
@@ -538,6 +725,35 @@
 
       function renderUrgentAndUpcoming() {
         const now = new Date();
+        const todayString = now.toDateString();
+
+        function renderTaskCard(task) {
+          const dueDate = new Date(task.dueDate);
+          const subject = subjects.find((s) => s.name === task.subject);
+          const color = subject ? subject.color : "#fff";
+
+          const isToday = dueDate.toDateString() === todayString;
+          const daysDiff = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
+
+          return `
+      <div class="side-task-card ${
+        isToday ? "today-highlight" : ""
+      }" style="border-left: 6px solid ${color}">
+        <div class="task-title">${task.subject} - ${task.type}</div>
+        <div class="task-date">
+          ${formatDateWithoutYear(task.dueDate)} 
+          ${
+            isToday
+              ? "<span class='today-alert'>❗</span>"
+              : `<span class="due-in">${daysDiff} day${
+                  daysDiff !== 1 ? "s" : ""
+                } left</span>`
+          }
+        </div>
+      </div>
+    `;
+        }
+
         const urgent = tasks.filter(
           (t) => new Date(t.dueDate) < now && !t.completed
         );
@@ -545,20 +761,13 @@
           const diff = (new Date(t.dueDate) - now) / (1000 * 60 * 60 * 24);
           return diff >= 0 && diff <= 3 && !t.completed;
         });
+
         document.getElementById("urgentTasks").innerHTML =
-          urgent
-            .map(
-              (t) =>
-                `<div>${t.subject} - ${formatDateWithoutYear(t.dueDate)}</div>`
-            )
-            .join("") || "None";
+          urgent.map(renderTaskCard).join("") || "<div>No urgent tasks</div>";
+
         document.getElementById("upcomingTasks").innerHTML =
-          upcoming
-            .map(
-              (t) =>
-                `<div>${t.subject} - ${formatDateWithoutYear(t.dueDate)}</div>`
-            )
-            .join("") || "None";
+          upcoming.map(renderTaskCard).join("") ||
+          "<div>No upcoming tasks</div>";
       }
 
       function showToast(msg) {
