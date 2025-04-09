@@ -481,7 +481,7 @@
               task.dueDate
             }" ondblclick="editTask(${task.id})">
           <td style="color: ${subjectColor}">${task.subject}</td>
-          <td>${new Date(task.dueDate).toLocaleDateString()}</td>
+          <td>${formatDateWithoutYear(task.dueDate)}</td>
           <td style="color: ${typeColor}">${task.type}</td>
           <td class="details">${task.details}</td>
           <td>
@@ -547,11 +547,17 @@
         });
         document.getElementById("urgentTasks").innerHTML =
           urgent
-            .map((t) => `<div>${t.subject} - ${t.dueDate}</div>`)
+            .map(
+              (t) =>
+                `<div>${t.subject} - ${formatDateWithoutYear(t.dueDate)}</div>`
+            )
             .join("") || "None";
         document.getElementById("upcomingTasks").innerHTML =
           upcoming
-            .map((t) => `<div>${t.subject} - ${t.dueDate}</div>`)
+            .map(
+              (t) =>
+                `<div>${t.subject} - ${formatDateWithoutYear(t.dueDate)}</div>`
+            )
             .join("") || "None";
       }
 
@@ -682,6 +688,11 @@
         renderTypes();
         renderTasks();
         updateCounters();
+      }
+
+      function formatDateWithoutYear(dateString) {
+        const options = { month: "long", day: "numeric" };
+        return new Date(dateString).toLocaleDateString(undefined, options);
       }
 
       init();
