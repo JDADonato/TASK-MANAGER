@@ -90,6 +90,10 @@
 
       td.details {
         text-align: left;
+        word-wrap: break-word;
+        word-break: break-word;
+        max-width: 250px;
+        white-space: normal;
       }
 
       tr {
@@ -518,6 +522,8 @@
         localStorage.setItem("subjects", JSON.stringify(subjects));
         renderSubjects();
         populateDropdown("taskSubject", subjects);
+        renderTasks();
+        updateCounters();
       }
 
       function deleteType(name) {
@@ -525,42 +531,48 @@
         localStorage.setItem("types", JSON.stringify(types));
         renderTypes();
         populateDropdown("taskType", types);
+        renderTasks();
+        updateCounters();
       }
 
-      function editSubject(name) {
-        const subject = subjects.find((s) => s.name === name);
-        if (!subject) return;
-
-        const newName = prompt("Edit subject name:", subject.name);
-        const newColor = prompt("Edit color (hex code):", subject.color);
-
-        if (!newName || !newColor) return;
-
-        subject.name = newName.trim();
-        subject.color = newColor;
+      function updateSubjectName(index, newName) {
+        if (!newName.trim()) return;
+        subjects[index].name = newName.trim();
         localStorage.setItem("subjects", JSON.stringify(subjects));
         renderSubjects();
         populateDropdown("taskSubject", subjects);
         renderTasks();
         updateCounters();
+        showToast("Subject updated");
       }
 
-      function editType(name) {
-        const type = types.find((t) => t.name === name);
-        if (!type) return;
+      function updateSubjectColor(index, newColor) {
+        subjects[index].color = newColor;
+        localStorage.setItem("subjects", JSON.stringify(subjects));
+        renderSubjects();
+        renderTasks();
+        updateCounters();
+        showToast("Subject color updated");
+      }
 
-        const newName = prompt("Edit type name:", type.name);
-        const newColor = prompt("Edit color (hex code):", type.color);
-
-        if (!newName || !newColor) return;
-
-        type.name = newName.trim();
-        type.color = newColor;
+      function updateTypeName(index, newName) {
+        if (!newName.trim()) return;
+        types[index].name = newName.trim();
         localStorage.setItem("types", JSON.stringify(types));
         renderTypes();
         populateDropdown("taskType", types);
         renderTasks();
         updateCounters();
+        showToast("Type updated");
+      }
+
+      function updateTypeColor(index, newColor) {
+        types[index].color = newColor;
+        localStorage.setItem("types", JSON.stringify(types));
+        renderTypes();
+        renderTasks();
+        updateCounters();
+        showToast("Type color updated");
       }
 
       function renderSubjects() {
@@ -568,63 +580,27 @@
           .map(
             (s, index) => `
       <div class="subject-item">
-        <input type="text" value="${s.name}" 
-               onchange="updateSubjectName(${index}, this.value)"
-               style="flex:1; background:transparent; color:${s.color}; border:none; font-weight:bold; margin-right: 10px; font-size:1em" />
+        <input type="text" value="${s.name}" onchange="updateSubjectName(${index}, this.value)" style="flex:1; background:transparent; color:${s.color}; border:none; font-weight:bold; font-size:1em" />
         <input type="color" class="color-picker" value="${s.color}" onchange="updateSubjectColor(${index}, this.value)" />
         <button onclick="deleteSubject('${s.name}')">Delete</button>
       </div>`
           )
           .join("");
       }
+
       function renderTypes() {
         document.getElementById("typesList").innerHTML = types
           .map(
             (t, index) => `
       <div class="type-item">
-        <input type="text" value="${t.name}" 
-               onchange="updateTypeName(${index}, this.value)"
-               style="flex:1; background:transparent; color:${t.color}; border:none; font-weight:bold; margin-right: 10px; font-size:1em"  />
-        <input type="color" class="color-picker" value="${t.color}" 
-               onchange="updateTypeColor(${index}, this.value)"
-               style="width: 40px; height: 40px; cursor: pointer;" />
+        <input type="text" value="${t.name}" onchange="updateTypeName(${index}, this.value)" style="flex:1; background:transparent; color:${t.color}; border:none; font-weight:bold; font-size:1em" />
+        <input type="color" class="color-picker" value="${t.color}" onchange="updateTypeColor(${index}, this.value)" />
         <button onclick="deleteType('${t.name}')">Delete</button>
       </div>`
           )
           .join("");
-
-        function updateSubjectName(index, newName) {
-          if (!newName.trim()) return;
-          subjects[index].name = newName.trim();
-          localStorage.setItem("subjects", JSON.stringify(subjects));
-          populateDropdown("taskSubject", subjects);
-          renderSubjects();
-          renderTasks();
-        }
-
-        function updateSubjectColor(index, newColor) {
-          subjects[index].color = newColor;
-          localStorage.setItem("subjects", JSON.stringify(subjects));
-          renderSubjects();
-          renderTasks();
-        }
-
-        function updateTypeName(index, newName) {
-          if (!newName.trim()) return;
-          types[index].name = newName.trim();
-          localStorage.setItem("types", JSON.stringify(types));
-          populateDropdown("taskType", types);
-          renderTypes();
-          renderTasks();
-        }
-
-        function updateTypeColor(index, newColor) {
-          types[index].color = newColor;
-          localStorage.setItem("types", JSON.stringify(types));
-          renderTypes();
-          renderTasks();
-        }
       }
+
       function saveTask() {
         const id = document.getElementById("taskId").value;
         const subject = document.getElementById("taskSubject").value;
@@ -633,6 +609,7 @@
         const details = document.getElementById("taskDetails").value;
         if (!subject || !dueDate || !type)
           return showToast("Fill all fields, details are optional");
+
         const task = {
           id: id ? parseInt(id) : Date.now(),
           subject,
@@ -641,12 +618,14 @@
           details,
           completed: false,
         };
+
         if (id) {
           const i = tasks.findIndex((t) => t.id === parseInt(id));
           if (i !== -1) tasks[i] = task;
         } else {
           tasks.push(task);
         }
+
         localStorage.setItem("tasks", JSON.stringify(tasks));
         renderTasks();
         updateCounters();
@@ -731,7 +710,6 @@
           const dueDate = new Date(task.dueDate);
           const subject = subjects.find((s) => s.name === task.subject);
           const color = subject ? subject.color : "#fff";
-
           const isToday = dueDate.toDateString() === todayString;
           const daysDiff = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
 
@@ -770,13 +748,6 @@
           "<div>No upcoming tasks</div>";
       }
 
-      function showToast(msg) {
-        const toast = document.getElementById("toast");
-        toast.textContent = msg;
-        toast.classList.add("show");
-        setTimeout(() => toast.classList.remove("show"), 3000);
-      }
-
       function generateCalendar(month, year) {
         const calendarGrid = document.getElementById("calendarGrid");
         const currentMonthElem = document.getElementById("currentMonth");
@@ -789,7 +760,6 @@
 
         calendarGrid.innerHTML = "";
 
-        // Add day headers
         ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach((day) => {
           const dayHeader = document.createElement("div");
           dayHeader.textContent = day;
@@ -798,21 +768,17 @@
           calendarGrid.appendChild(dayHeader);
         });
 
-        // Add calendar days
         const firstDay = new Date(year, month, 1);
         const lastDay = new Date(year, month + 1, 0);
 
-        // Previous month
         for (let i = 0; i < firstDay.getDay(); i++) {
           createCalendarDay(new Date(year, month, -i), true);
         }
 
-        // Current month
         for (let d = 1; d <= lastDay.getDate(); d++) {
           createCalendarDay(new Date(year, month, d));
         }
 
-        // Next month
         const nextMonthDays = 7 - (lastDay.getDay() + 1);
         for (let i = 1; i <= nextMonthDays; i++) {
           createCalendarDay(new Date(year, month + 1, i), true);
@@ -842,15 +808,12 @@
         dayElement.innerHTML = `
       <div class="calendar-date">${date.getDate()}</div>
       <div class="task-dots">
-          ${subjectColors
-            .map(
-              (color) => `
-              <div class="task-dot" 
-                   style="background: ${color}"
-                   onclick="handleCalendarClick('${localDateString}')"></div>
-          `
-            )
-            .join("")}
+        ${subjectColors
+          .map(
+            (color) =>
+              `<div class="task-dot" style="background: ${color}" onclick="handleCalendarClick('${localDateString}')"></div>`
+          )
+          .join("")}
       </div>
   `;
 
@@ -859,7 +822,6 @@
 
       function handleCalendarClick(dateString) {
         hideModals();
-        // Directly use the YYYY-MM-DD format
         const taskRows = document.querySelectorAll(
           `tr[data-date="${dateString}"]`
         );
@@ -874,6 +836,26 @@
           showToast("No tasks found for this date");
         }
       }
+
+      function getTasksForDate(date) {
+        return tasks.filter(
+          (task) =>
+            new Date(task.dueDate).toDateString() === date.toDateString()
+        );
+      }
+
+      function formatDateWithoutYear(dateString) {
+        const options = { month: "long", day: "numeric" };
+        return new Date(dateString).toLocaleDateString(undefined, options);
+      }
+
+      function showToast(msg) {
+        const toast = document.getElementById("toast");
+        toast.textContent = msg;
+        toast.classList.add("show");
+        setTimeout(() => toast.classList.remove("show"), 3000);
+      }
+
       function changeMonth(offset) {
         currentMonth += offset;
         if (currentMonth > 11) {
@@ -886,22 +868,11 @@
         generateCalendar(currentMonth, currentYear);
       }
 
-      function getTasksForDate(date) {
-        return tasks.filter((task) => {
-          const taskDate = new Date(task.dueDate);
-          return taskDate.toDateString() === date.toDateString();
-        });
-      }
       function init() {
         renderSubjects();
         renderTypes();
         renderTasks();
         updateCounters();
-      }
-
-      function formatDateWithoutYear(dateString) {
-        const options = { month: "long", day: "numeric" };
-        return new Date(dateString).toLocaleDateString(undefined, options);
       }
 
       init();
