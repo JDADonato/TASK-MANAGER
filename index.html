@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nexus Task Manager</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #1a1a1a;
+      --secondary: #2d2d2d;
+      --accent: #00ff88;
+      --text: #ffffff;
+      --danger: #ff4444;
+      --warning: #ffbb33;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--primary);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 3fr 1fr;
+      gap: 20px;
+      min-height: 100vh;
+    }
+
+    @media (max-width: 768px) {
+      body { grid-template-columns: 1fr; }
+    }
+
+    .main-panel, .side-panel {
+      background: var(--secondary);
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+      overflow-x: auto;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      background: var(--accent);
+      color: var(--primary);
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .counters {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      text-align: center;
+    }
+
+    td.details { text-align: left; }
+
+    tr {
+      background: rgba(255,255,255,0.02);
+      transition: background 0.2s;
+      cursor: pointer;
+    }
+
+    tr:hover { background: rgba(255,255,255,0.08); }
+
+    .status-checkbox {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(40, 40, 40, 0.9);
+      backdrop-filter: blur(10px);
+      padding: 35px 30px;
+      border-radius: 16px;
+      width: 360px;
+      max-width: 90%;
+      z-index: 1000;
+    }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      z-index: 999;
+    }
+
+    .form-group { margin-bottom: 16px; }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      background: #333;
+      color: white;
+      border: none;
+      border-radius: 6px;
+    }
+
+    .subject-item, .type-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding: 6px 10px;
+      background: #2a2a2a;
+      border-radius: 6px;
+    }
+
+    .subject-item button, .type-item button {
+      background: var(--danger);
+      border: none;
+      padding: 6px;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    input [type="color"] {
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    input [type="date"] {
+      width: calc(100% - 50px);
+      padding: 10px;
+      background: #333;
+      color: white;
+      border: none;
+      border-radius: 6px;
+    }
+
+    input #subjectColor{
+        width: 40px;
+        height: 40px;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #333;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 6px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s;
+    }
+
+    .toast.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="main-panel">
+    <div class="controls">
+      <button onclick="showModal('task')">New Task</button>
+      <button onclick="showModal('subject')">Subjects</button>
+      <button onclick="showModal('type')">Types</button>
+    </div>
+    <div class="counters">
+      <div>Total: <span id="totalCounter">0</span></div>
+      <div>Completed: <span id="completedCounter">0</span></div>
+      <div>Pending: <span id="pendingCounter">0</span></div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th>Due Date</th>
+          <th>Type</th>
+          <th>Details</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="taskBody"></tbody>
+    </table>
+  </div>
+  <div class="side-panel">
+    <h3>Upcoming</h3>
+    <div id="upcomingTasks"></div>
+    <h3>Urgent</h3>
+    <div id="urgentTasks"></div>
+  </div>
+  <div class="modal-overlay" id="modalOverlay" onclick="hideModals()"></div>
+  <div id="taskModal" class="modal">
+    <h2 id="modalTitle">New Task</h2>
+    <div class="form-group"><label>Subject:</label><select id="taskSubject"></select></div>
+    <div class="form-group"><label>Due Date:</label><input type="date" id="taskDueDate"></div>
+    <div class="form-group"><label>Type:</label><select id="taskType"></select></div>
+    <div class="form-group"><label>Details:</label><textarea id="taskDetails"></textarea></div>
+    <input type="hidden" id="taskId">
+    <button onclick="saveTask()">Save</button>
+  </div>
+  <div id="subjectModal" class="modal">
+    <h2>Manage Subjects</h2>
+    <div id="subjectsList"></div>
+    <div class="form-group">
+      <input type="text" id="newSubject" placeholder="New subject">
+      <input type="color" id="subjectColor" style=" height: 50px; cursor: pointer; margin: 10px 0 10px;">
+      <button onclick="addSubject()">Add</button>
+    </div>
+  </div>
+  <div id="typeModal" class="modal">
+    <h2>Manage Types</h2>
+    <div id="typesList"></div>
+    <div class="form-group">
+      <input type="text" id="newType" placeholder="New type">
+      <input type="color" id="typeColor" style=" height: 50px; cursor: pointer; margin: 10px 0 10px;">
+      <button onclick="addType()">Add</button>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script>
+    let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+    let subjects = JSON.parse(localStorage.getItem('subjects')) || [];
+    let types = JSON.parse(localStorage.getItem('types')) || [];
+
+    function showModal(type) {
+      document.getElementById('modalOverlay').style.display = 'block';
+      document.getElementById(`${type}Modal`).style.display = 'block';
+      if (type === 'task') {
+        populateDropdown('taskSubject', subjects);
+        populateDropdown('taskType', types);
+      }
+    }
+
+    function hideModals() {
+      document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+      document.getElementById('modalOverlay').style.display = 'none';
+      document.getElementById('taskId').value = '';
+    }
+
+    function populateDropdown(id, list) {
+      const select = document.getElementById(id);
+      select.innerHTML = list.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+    }
+
+    function addSubject() {
+      const name = document.getElementById('newSubject').value.trim();
+      const color = document.getElementById('subjectColor').value;
+      if (!name) return showToast('Subject required');
+      if (subjects.some(s => s.name.toLowerCase() === name.toLowerCase())) return showToast('Duplicate subject');
+      subjects.push({ name, color });
+      localStorage.setItem('subjects', JSON.stringify(subjects));
+      renderSubjects();
+      populateDropdown('taskSubject', subjects);
+      document.getElementById('newSubject').value = '';
+    }
+
+    function addType() {
+      const name = document.getElementById('newType').value.trim();
+      const color = document.getElementById('typeColor').value;
+      if (!name) return showToast('Type required');
+      if (types.some(t => t.name.toLowerCase() === name.toLowerCase())) return showToast('Duplicate type');
+      types.push({ name, color });
+      localStorage.setItem('types', JSON.stringify(types));
+      renderTypes();
+      populateDropdown('taskType', types);
+      document.getElementById('newType').value = '';
+    }
+
+    function deleteSubject(name) {
+      subjects = subjects.filter(s => s.name !== name);
+      localStorage.setItem('subjects', JSON.stringify(subjects));
+      renderSubjects();
+      populateDropdown('taskSubject', subjects);
+    }
+
+    function deleteType(name) {
+      types = types.filter(t => t.name !== name);
+      localStorage.setItem('types', JSON.stringify(types));
+      renderTypes();
+      populateDropdown('taskType', types);
+    }
+
+    function renderSubjects() {
+      document.getElementById('subjectsList').innerHTML = subjects.map(s => `
+        <div class="subject-item">
+          <span style="color:${s.color}">${s.name}</span>
+          <button onclick="deleteSubject('${s.name}')">Delete</button>
+        </div>`).join('');
+    }
+
+    function renderTypes() {
+      document.getElementById('typesList').innerHTML = types.map(t => `
+        <div class="type-item">
+          <span style="color:${t.color}">${t.name}</span>
+          <button onclick="deleteType('${t.name}')">Delete</button>
+        </div>`).join('');
+    }
+
+    function saveTask() {
+      const id = document.getElementById('taskId').value;
+      const subject = document.getElementById('taskSubject').value;
+      const dueDate = document.getElementById('taskDueDate').value;
+      const type = document.getElementById('taskType').value;
+      const details = document.getElementById('taskDetails').value;
+      if (!subject || !dueDate || !type) return showToast('Fill all fields, details are optional');
+      const task = { id: id ? parseInt(id) : Date.now(), subject, dueDate, type, details, completed: false };
+      if (id) {
+        const i = tasks.findIndex(t => t.id === parseInt(id));
+        if (i !== -1) tasks[i] = task;
+      } else {
+        tasks.push(task);
+      }
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+      renderTasks();
+      updateCounters();
+      hideModals();
+      showToast(id ? 'Task updated' : 'Task added');
+    }
+
+    function renderTasks() {
+      tasks.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+      document.getElementById('taskBody').innerHTML = tasks.map(task => `
+        <tr ondblclick="editTask(${task.id})">
+          <td>${task.subject}</td>
+          <td>${new Date(task.dueDate).toLocaleDateString()}</td>
+          <td>${task.type}</td>
+          <td class="details">${task.details}</td>
+          <td><input type="checkbox" ${task.completed ? 'checked' : ''} onclick="event.stopPropagation();toggleStatus(${task.id})" class="status-checkbox"></td>
+          <td><button onclick="event.stopPropagation();deleteTask(${task.id})">Delete</button></td>
+        </tr>`).join('');
+    }
+
+    function editTask(id) {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+      showModal('task');
+      document.getElementById('taskId').value = task.id;
+      document.getElementById('taskSubject').value = task.subject;
+      document.getElementById('taskDueDate').value = task.dueDate;
+      document.getElementById('taskType').value = task.type;
+      document.getElementById('taskDetails').value = task.details;
+    }
+
+    function deleteTask(id) {
+      tasks = tasks.filter(t => t.id !== id);
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+      renderTasks();
+      updateCounters();
+      showToast('Task deleted');
+    }
+
+    function toggleStatus(id) {
+      const task = tasks.find(t => t.id === id);
+      task.completed = !task.completed;
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+      renderTasks();
+      updateCounters();
+    }
+
+    function updateCounters() {
+      document.getElementById('totalCounter').textContent = tasks.length;
+      const completed = tasks.filter(t => t.completed).length;
+      document.getElementById('completedCounter').textContent = completed;
+      document.getElementById('pendingCounter').textContent = tasks.length - completed;
+      renderUrgentAndUpcoming();
+    }
+
+    function renderUrgentAndUpcoming() {
+      const now = new Date();
+      const urgent = tasks.filter(t => new Date(t.dueDate) < now && !t.completed);
+      const upcoming = tasks.filter(t => {
+        const diff = (new Date(t.dueDate) - now) / (1000 * 60 * 60 * 24);
+        return diff >= 0 && diff <= 3 && !t.completed;
+      });
+      document.getElementById('urgentTasks').innerHTML = urgent.map(t => `<div>${t.subject} - ${t.dueDate}</div>`).join('') || 'None';
+      document.getElementById('upcomingTasks').innerHTML = upcoming.map(t => `<div>${t.subject} - ${t.dueDate}</div>`).join('') || 'None';
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    function init() {
+      renderSubjects();
+      renderTypes();
+      renderTasks();
+      updateCounters();
+    }
+
+    init();
+  </script>
+</body>
+</html>
