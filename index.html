@@ -1388,15 +1388,21 @@
     }
 
     function exportTasks() {
-      const dataStr = JSON.stringify(tasks, null, 2);
+      const data = {
+        tasks,
+        subjects,
+        types
+      };
+
+      const dataStr = JSON.stringify(data, null, 2);
       const blob = new Blob([dataStr], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "tasks.json";
+      a.download = "nexus-backup.json";
       a.click();
       URL.revokeObjectURL(url);
-      showToast("Tasks exported");
+      showToast("Backup exported");
     }
 
     function importTasks(event) {
@@ -1406,20 +1412,48 @@
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const importedTasks = JSON.parse(e.target.result);
-          if (!Array.isArray(importedTasks)) throw new Error("Invalid format");
-          tasks = importedTasks;
+          const data = JSON.parse(e.target.result);
+
+          const importedTasks = Array.isArray(data) ? data : data.tasks || [];
+          const importedSubjects = data.subjects || [];
+          const importedTypes = data.types || [];
+
+          // Append missing subjects
+          importedSubjects.forEach((s) => {
+            if (!subjects.some((subj) => subj.name === s.name)) {
+              subjects.push(s);
+            }
+          });
+
+          // Append missing types
+          importedTypes.forEach((t) => {
+            if (!types.some((typ) => typ.name === t.name)) {
+              types.push(t);
+            }
+          });
+
+          // Append missing tasks
+          importedTasks.forEach((task) => {
+            if (!tasks.some((t) => t.id === task.id)) {
+              tasks.push(task);
+            }
+          });
+
           localStorage.setItem("tasks", JSON.stringify(tasks));
-          renderTasks();
+          localStorage.setItem("subjects", JSON.stringify(subjects));
+          localStorage.setItem("types", JSON.stringify(types));
+
+          renderSubjects();
+          renderTypes();
+          renderTasks({ skipSort: true });
           updateCounters();
-          showToast("Tasks imported");
+          showToast("Backup imported and merged");
         } catch (err) {
           showToast("Invalid JSON file");
         }
       };
       reader.readAsText(file);
     }
-
 
     init();
   </script>
