@@ -529,78 +529,76 @@
     }
 
     .button {
-  background: var(--accent);
-  color: var(--primary);
-  border: none;
-  padding: 10px 20px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 14px;
-}
+      background: var(--accent);
+      color: var(--primary);
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+    }
 
-.dropdown-content {
-  display: none;
-  position: absolute;
-  top: 110%;
-  left: 0;
-  background: var(--secondary);
-  border: 1px solid #444;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-  z-index: 1000;
-  min-width: 160px;
-  padding: 10px 0;
-}
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      top: 110%;
+      left: 0;
+      background: var(--secondary);
+      border: 1px solid #444;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+      z-index: 1000;
+      min-width: 160px;
+      padding: 10px 0;
+    }
 
-.dropdown-content .dropdown-btn {
-  background: none;
-  color: var(--text);
-  border: none;
-  padding: 10px 20px;
-  text-align: left;
-  width: 100%;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background 0.2s ease;
-}
+    .dropdown-content .dropdown-btn {
+      background: none;
+      color: var(--text);
+      border: none;
+      padding: 10px 20px;
+      text-align: left;
+      width: 100%;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s ease;
+    }
 
-.dropdown-content .dropdown-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
+    .dropdown-content .dropdown-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
 
-.styled-select {
-  position: relative;
-  display: inline-block;
-  width: 180px;
-}
+    .styled-select {
+      position: relative;
+      display: inline-block;
+      width: 180px;
+    }
 
-.styled-select select {
-  width: 100%;
-  padding: 10px;
-  padding-right: 30px;
-  border-radius: 6px;
-  background-color: var(--accent);
-  color: var(--primary);
-  border: none;
-  font-family: inherit;
-  font-size: 14px;
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-}
+    .styled-select select {
+      width: 100%;
+      padding: 10px;
+      padding-right: 30px;
+      border-radius: 6px;
+      background-color: var(--accent);
+      color: var(--primary);
+      border: none;
+      font-family: inherit;
+      font-size: 14px;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+    }
 
-.styled-select i {
-  position: absolute;
-  top: 50%;
-  right: 12px;
-  transform: translateY(-50%);
-  pointer-events: none;
-  color: var(--primary);
-}
-
-
+    .styled-select i {
+      position: absolute;
+      top: 50%;
+      right: 12px;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: var(--primary);
+    }
   </style>
 </head>
 
@@ -622,22 +620,22 @@
           </label>
         </div>
       </div>
-            <button onclick="showModal('calendar')">Calendar View</button>
+      <button onclick="showModal('calendar')">Calendar View</button>
       <button onclick="renderTasks()">Sort by Due Date</button>
 
 
       <input id="taskSearch" type="text" placeholder="Search..." oninput="filterTasks()"
         style="padding: 10px; border-radius: 6px; flex: 1; max-width: 300px" />
-        <div class="styled-select">
-          <select id="priorityFilter" onchange="filterTasks()">
-            <option value="">All Priorities</option>
-            <option value="High">High</option>
-            <option value="Medium">Medium</option>
-            <option value="Low">Low</option>
-          </select>
-          <i class="fa fa-caret-down"></i>
-        </div>
-            </div>
+      <div class="styled-select">
+        <select id="priorityFilter" onchange="filterTasks()">
+          <option value="">All Priorities</option>
+          <option value="High">High</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
+        </select>
+        <i class="fa fa-caret-down"></i>
+      </div>
+    </div>
     <div class="counters">
       <div>Total: <span id="totalCounter">0</span></div>
       <div>Completed: <span id="completedCounter">0</span></div>
@@ -724,17 +722,17 @@
 
   <script>
 
-function toggleDropdown() {
-  const dropdown = document.getElementById("manageDropdown");
-  dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
-  // Close when clicking outside
-  window.addEventListener("click", function closeOutside(e) {
-    if (!dropdown.contains(e.target) && !e.target.closest("button[onclick='toggleDropdown()']")) {
-      dropdown.style.display = "none";
-      window.removeEventListener("click", closeOutside);
+    function toggleDropdown() {
+      const dropdown = document.getElementById("manageDropdown");
+      dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+      // Close when clicking outside
+      window.addEventListener("click", function closeOutside(e) {
+        if (!dropdown.contains(e.target) && !e.target.closest("button[onclick='toggleDropdown()']")) {
+          dropdown.style.display = "none";
+          window.removeEventListener("click", closeOutside);
+        }
+      });
     }
-  });
-}
 
     let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
     let subjects = JSON.parse(localStorage.getItem("subjects")) || [];
@@ -1204,38 +1202,50 @@ function toggleDropdown() {
 
     function createCalendarDay(date, isOtherMonth = false) {
       const dayElement = document.createElement("div");
-      dayElement.className = `calendar-day ${isOtherMonth ? "other-month" : ""
-        }`;
+      dayElement.className = `calendar-day ${isOtherMonth ? "other-month" : ""}`;
 
       const dayTasks = getTasksForDate(date);
-      const subjectColors = [
-        ...new Set(
-          dayTasks.map((task) => {
-            const subject = subjects.find((s) => s.name === task.subject);
-            return subject ? subject.color : "#fff";
-          })
-        ),
-      ];
 
-      const localDateString = `${date.getFullYear()}-${(date.getMonth() + 1)
+      const dateString = `${date.getFullYear()}-${(date.getMonth() + 1)
         .toString()
         .padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
 
+      // Build the dots HTML
+      const taskDotsHtml = dayTasks.map((task) => {
+        const subject = subjects.find((s) => s.name === task.subject);
+        const color = subject ? subject.color : "#fff";
+        return `<div 
+              class="task-dot" 
+              style="background: ${color}" 
+              onclick="highlightTaskById(${task.id})"
+              title="${task.subject} - ${task.type}">
+            </div>`;
+      }).join("");
+
       dayElement.innerHTML = `
-      <div class="calendar-date">${date.getDate()}</div>
-      <div class="task-dots">
-        ${subjectColors
-          .map(
-            (color) =>
-              `<div class="task-dot" style="background: ${color}"onclick="handleCalendarClick('${localDateString}')"
-></div>`
-          )
-          .join("")}
-      </div>
+    <div class="calendar-date">${date.getDate()}</div>
+    <div class="task-dots">${taskDotsHtml}</div>
   `;
+
+      dayElement.addEventListener("click", (e) => {
+        if (e.target.classList.contains("task-dot")) return;
+
+        const rows = document.querySelectorAll(`#taskBody tr`);
+        rows.forEach(row => {
+          const dateInput = row.querySelector(`input[type="date"]`);
+          if (dateInput && dateInput.value === dateString) {
+            row.classList.remove("highlight");
+            void row.offsetWidth;
+            row.classList.add("highlight");
+            row.scrollIntoView({ behavior: "smooth", block: "center" });
+            setTimeout(() => row.classList.remove("highlight"), 1200);
+          }
+        });
+      });
 
       document.getElementById("calendarGrid").appendChild(dayElement);
     }
+
 
     function handleCalendarClick(dateString) {
       hideModals();
@@ -1294,7 +1304,7 @@ function toggleDropdown() {
     function init() {
       renderSubjects();
       renderTypes();
-      renderTasks({ skipSort: true }); 
+      renderTasks({ skipSort: true });
       updateCounters();
     }
 
