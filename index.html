@@ -599,6 +599,53 @@
       pointer-events: none;
       color: var(--primary);
     }
+
+    .counter-card {
+      background: #2a2a2a;
+      padding: 12px 20px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      font-size: 0.95em;
+      font-weight: 600;
+      color: var(--text);
+      border-left: 4px solid var(--accent);
+      transition: all 0.3s ease;
+    }
+
+    .counter-card i {
+      font-size: 1.2em;
+      color: var(--accent);
+    }
+
+    .fade-out-card {
+      animation: fadeOutCard 0.5s forwards;
+    }
+
+    @keyframes fadeOutCard {
+      to {
+        opacity: 0;
+        transform: translateY(-8px);
+      }
+    }
+
+    .fade-in-card {
+      animation: fadeInCard 0.5s forwards;
+    }
+
+    @keyframes fadeInCard {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
   </style>
 </head>
 
@@ -637,9 +684,18 @@
       </div>
     </div>
     <div class="counters">
-      <div>Total: <span id="totalCounter">0</span></div>
-      <div>Completed: <span id="completedCounter">0</span></div>
-      <div>Pending: <span id="pendingCounter">0</span></div>
+      <div class="counter-card">
+        <i class="fa fa-list"></i>
+        Total: <span id="totalCounter">0</span>
+      </div>
+      <div class="counter-card">
+        <i class="fa fa-check-circle"></i>
+        Completed: <span id="completedCounter">0</span>
+      </div>
+      <div class="counter-card">
+        <i class="fa fa-clock"></i>
+        Pending: <span id="pendingCounter">0</span>
+      </div>
     </div>
     <table>
       <thead>
@@ -894,6 +950,7 @@
       if (!subject || !dueDate || !type)
         return showToast("Fill all fields, details are optional");
 
+      const existingTask = tasks.find((t) => t.id === parseInt(id));
       const task = {
         id: id ? parseInt(id) : Date.now(),
         subject,
@@ -901,7 +958,7 @@
         type,
         details,
         priority,
-        completed: false,
+        completed: existingTask ? existingTask.completed : false,
       };
 
       if (id) {
@@ -984,8 +1041,8 @@
             </select>
           </td>
           <td>
-            <input type="checkbox" class="status-checkbox" ${task.completed ? "checked" : ""
-          } onclick="toggleStatus(${task.id})">
+<input type="checkbox" class="status-checkbox" ${task.completed ? "checked" : ""} onclick="toggleStatus(${task.id}, this)">
+
           </td>
           <td>
             <button onclick="deleteTask(${task.id})">Delete</button>
@@ -1071,18 +1128,38 @@
     }
 
     function toggleStatus(id, checkbox) {
-      const row = checkbox.closest("tr");
       const task = tasks.find((t) => t.id === id);
       if (task) {
-        task.completed = !task.completed;
-        row.classList.add("fade-out");
+        task.completed = checkbox.checked;
         localStorage.setItem("tasks", JSON.stringify(tasks));
-        setTimeout(() => {
-          renderTasks();
+
+        const cardId = `task-card-${id}`;
+        const card = document.getElementById(cardId);
+
+        if (card) {
+          if (task.completed) {
+            card.classList.add("fade-out-card");
+            setTimeout(() => {
+              card.remove();
+              updateCounters();
+            }, 500);
+          } else {
+            updateCounters();
+            setTimeout(() => {
+              const newCard = document.getElementById(cardId);
+              if (newCard) {
+                newCard.classList.add("fade-in-card");
+              }
+            }, 0);
+          }
+        } else {
           updateCounters();
-        }, 600);
+        }
+
+        renderTasks();
       }
     }
+
 
     function filterTasks() {
       renderTasks();
@@ -1120,37 +1197,39 @@
         const daysDiff = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
 
         return `
-  <div class="side-task-card ${isToday ? "today-highlight" : ""}"
-       style="border-left: 6px solid ${color}"
-       onclick="highlightTaskById(${task.id})">
-    <div class="task-title">${task.subject} - ${task.type}</div>
-    <div class="task-date">
-      ${formatDateWithoutYear(task.dueDate)} 
-      ${isToday
+      <div id="task-card-${task.id}" 
+           class="side-task-card ${isToday ? "today-highlight" : ""}"
+           style="border-left: 6px solid ${color}"
+           onclick="highlightTaskById(${task.id})">
+        <div class="task-title">${task.subject} - ${task.type}</div>
+        <div class="task-date">
+          ${formatDateWithoutYear(task.dueDate)} 
+          ${isToday
             ? "<span class='today-alert'>❗</span>"
             : `<span class="due-in">${daysDiff} day${daysDiff !== 1 ? "s" : ""} left</span>`}
-    </div>
-  </div>
-`;
+        </div>
+      </div>
+    `;
       }
 
+      // Update Urgent
+      const urgentContainer = document.getElementById("urgentTasks");
+      const urgentTasks = tasks.filter(t => new Date(t.dueDate) < now && !t.completed);
+      const urgentHtml = urgentTasks.map(renderTaskCard).join("") || "<div>No urgent tasks</div>";
 
+      urgentContainer.innerHTML = urgentHtml;
 
-      const urgent = tasks.filter(
-        (t) => new Date(t.dueDate) < now && !t.completed
-      );
-      const upcoming = tasks.filter((t) => {
+      // Update Upcoming
+      const upcomingContainer = document.getElementById("upcomingTasks");
+      const upcomingTasks = tasks.filter(t => {
         const diff = (new Date(t.dueDate) - now) / (1000 * 60 * 60 * 24);
         return diff >= 0 && diff <= 3 && !t.completed;
       });
+      const upcomingHtml = upcomingTasks.map(renderTaskCard).join("") || "<div>No upcoming tasks</div>";
 
-      document.getElementById("urgentTasks").innerHTML =
-        urgent.map(renderTaskCard).join("") || "<div>No urgent tasks</div>";
-
-      document.getElementById("upcomingTasks").innerHTML =
-        upcoming.map(renderTaskCard).join("") ||
-        "<div>No upcoming tasks</div>";
+      upcomingContainer.innerHTML = upcomingHtml;
     }
+
 
     function generateCalendar(month, year) {
       const calendarGrid = document.getElementById("calendarGrid");
