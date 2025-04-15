@@ -453,8 +453,31 @@
 
     tr.highlight {
       background: var(--accent) !important;
-      box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
-      transition: background 0.5s ease;
+      box-shadow: 0 0 12px 4px rgba(0, 255, 136, 0.6);
+      transition: all 0.4s ease;
+      border-radius: 10px;
+    }
+
+    @keyframes pulseHighlight {
+      0% {
+        box-shadow: 0 0 0 rgba(0, 255, 136, 0.6);
+      }
+
+      50% {
+        box-shadow: 0 0 20px 8px rgba(0, 255, 136, 0.4);
+      }
+
+      100% {
+        box-shadow: 0 0 0 rgba(0, 255, 136, 0);
+      }
+    }
+
+    tr.highlight {
+      animation: pulseHighlight 1s ease-in-out;
+    }
+
+    html {
+      scroll-behavior: smooth;
     }
 
     .side-task-card {
@@ -493,6 +516,91 @@
       color: var(--danger);
       font-weight: bold;
     }
+
+    .side-task-card {
+      transition: all 0.3s ease;
+    }
+
+    .side-task-card:hover {
+      background: #2e2e2e;
+      transform: translateY(-4px) scale(1.03);
+      box-shadow: 0 8px 16px rgba(0, 255, 136, 0.3);
+      border-left: 6px solid var(--accent);
+    }
+
+    .button {
+  background: var(--accent);
+  color: var(--primary);
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  top: 110%;
+  left: 0;
+  background: var(--secondary);
+  border: 1px solid #444;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  min-width: 160px;
+  padding: 10px 0;
+}
+
+.dropdown-content .dropdown-btn {
+  background: none;
+  color: var(--text);
+  border: none;
+  padding: 10px 20px;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s ease;
+}
+
+.dropdown-content .dropdown-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.styled-select {
+  position: relative;
+  display: inline-block;
+  width: 180px;
+}
+
+.styled-select select {
+  width: 100%;
+  padding: 10px;
+  padding-right: 30px;
+  border-radius: 6px;
+  background-color: var(--accent);
+  color: var(--primary);
+  border: none;
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.styled-select i {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--primary);
+}
+
+
   </style>
 </head>
 
@@ -500,19 +608,36 @@
   <div class="main-panel">
     <div class="controls">
       <button onclick="showModal('task')">New Task</button>
-      <button onclick="showModal('subject')">Subjects</button>
-      <button onclick="showModal('type')">Types</button>
-      <button onclick="showModal('calendar')">Calendar View</button>
+      <div class="dropdown" style="position: relative;">
+        <button onclick="toggleDropdown()" class="button">
+          Manage <i class="fa fa-caret-down"></i>
+        </button>
+        <div id="manageDropdown" class="dropdown-content">
+          <button onclick="showModal('subject')" class="dropdown-btn">Subjects</button>
+          <button onclick="showModal('type')" class="dropdown-btn">Types</button>
+          <button onclick="exportTasks()" class="dropdown-btn">Export</button>
+          <label class="dropdown-btn" style="margin: 0; display: block; cursor: pointer;">
+            Import
+            <input type="file" accept=".json" onchange="importTasks(event)" style="display: none;" />
+          </label>
+        </div>
+      </div>
+            <button onclick="showModal('calendar')">Calendar View</button>
+      <button onclick="renderTasks()">Sort by Due Date</button>
+
 
       <input id="taskSearch" type="text" placeholder="Search..." oninput="filterTasks()"
         style="padding: 10px; border-radius: 6px; flex: 1; max-width: 300px" />
-      <select id="priorityFilter" onchange="filterTasks()" style="padding: 10px; border-radius: 6px">
-        <option value="">All Priorities</option>
-        <option value="High">High</option>
-        <option value="Medium">Medium</option>
-        <option value="Low">Low</option>
-      </select>
-    </div>
+        <div class="styled-select">
+          <select id="priorityFilter" onchange="filterTasks()">
+            <option value="">All Priorities</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+          <i class="fa fa-caret-down"></i>
+        </div>
+            </div>
     <div class="counters">
       <div>Total: <span id="totalCounter">0</span></div>
       <div>Completed: <span id="completedCounter">0</span></div>
@@ -595,8 +720,22 @@
   </div>
   <div class="toast" id="toast"></div>
   <div class="toast" id="undoToast" style="background: #222"></div>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
   <script>
+
+function toggleDropdown() {
+  const dropdown = document.getElementById("manageDropdown");
+  dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+  // Close when clicking outside
+  window.addEventListener("click", function closeOutside(e) {
+    if (!dropdown.contains(e.target) && !e.target.closest("button[onclick='toggleDropdown()']")) {
+      dropdown.style.display = "none";
+      window.removeEventListener("click", closeOutside);
+    }
+  });
+}
+
     let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
     let subjects = JSON.parse(localStorage.getItem("subjects")) || [];
     let types = JSON.parse(localStorage.getItem("types")) || [];
@@ -781,81 +920,102 @@
       showToast(id ? "Task updated" : "Task added");
     }
 
-    function renderTasks() {
+    function renderTasks({ skipSort = false } = {}) {
       const tbody = document.getElementById("taskBody");
       tbody.innerHTML = "";
 
-      const search =
-        document.getElementById("taskSearch")?.value?.toLowerCase() || "";
+      const search = document.getElementById("taskSearch")?.value?.toLowerCase() || "";
       const priority = document.getElementById("priorityFilter")?.value || "";
 
-      tasks
-        .filter((t) => {
-          return (
-            (!search ||
-              t.subject.toLowerCase().includes(search) ||
-              t.details.toLowerCase().includes(search)) &&
-            (!priority || t.priority === priority)
-          );
-        })
-        .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
-        .forEach((task) => {
-          const row = document.createElement("tr");
+      let filtered = tasks.filter((t) => {
+        return (
+          (!search || t.subject.toLowerCase().includes(search) || t.details.toLowerCase().includes(search)) &&
+          (!priority || t.priority === priority)
+        );
+      });
 
-          row.innerHTML = `
+      if (!skipSort) {
+        filtered.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+      }
+
+      filtered.forEach((task) => {
+        const row = document.createElement("tr");
+        row.setAttribute("data-id", task.id);
+        row.innerHTML = `
           <td>
 <select onchange="updateTaskField(${task.id
-            }, 'subject', this.value)" style="color: ${getSubjectColor(
-              task.subject
-            )};">
+          }, 'subject', this.value)" style="color: ${getSubjectColor(
+            task.subject
+          )};">
   ${subjects
-              .map(
-                (s) =>
-                  `<option value="${s.name}" ${s.name === task.subject ? "selected" : ""
-                  }>${s.name}</option>`
-              )
-              .join("")}
+            .map(
+              (s) =>
+                `<option value="${s.name}" ${s.name === task.subject ? "selected" : ""
+                }>${s.name}</option>`
+            )
+            .join("")}
 </select>
           </td>
           <td>
             <input type="date" value="${task.dueDate
-            }" onchange="updateTaskField(${task.id}, 'dueDate', this.value)">
+          }" onchange="updateTaskField(${task.id}, 'dueDate', this.value)">
           </td>
           <td>
 <select onchange="updateTaskField(${task.id
-            }, 'type', this.value)" style="color: ${getTypeColor(task.type)};">
+          }, 'type', this.value)" style="color: ${getTypeColor(task.type)};">
   ${types
-              .map(
-                (t) =>
-                  `<option value="${t.name}" ${t.name === task.type ? "selected" : ""}>${t.name
-                  }</option>`
-              )
-              .join("")}
+            .map(
+              (t) =>
+                `<option value="${t.name}" ${t.name === task.type ? "selected" : ""}>${t.name
+                }</option>`
+            )
+            .join("")}
 </select>
           </td>
           <td class="details" contenteditable="true" onblur="updateTaskField(${task.id
-            }, 'details', this.textContent.trim())">${task.details}</td>
+          }, 'details', this.textContent.trim())">${task.details}</td>
           <td>
             <select onchange="updateTaskField(${task.id
-            }, 'priority', this.value)">
+          }, 'priority', this.value)">
               <option value="High" ${task.priority === "High" ? "selected" : ""
-            }>High</option>
+          }>High</option>
               <option value="Medium" ${task.priority === "Medium" ? "selected" : ""
-            }>Medium</option>
+          }>Medium</option>
               <option value="Low" ${task.priority === "Low" ? "selected" : ""
-            }>Low</option>
+          }>Low</option>
             </select>
           </td>
           <td>
             <input type="checkbox" class="status-checkbox" ${task.completed ? "checked" : ""
-            } onclick="toggleStatus(${task.id})">
+          } onclick="toggleStatus(${task.id})">
           </td>
           <td>
             <button onclick="deleteTask(${task.id})">Delete</button>
           </td>
         `;
-          tbody.appendChild(row);
-        });
+        tbody.appendChild(row);
+      });
+      enableRowDragging();
+
+    }
+
+    function enableRowDragging() {
+      const tbody = document.getElementById("taskBody");
+      Sortable.create(tbody, {
+        animation: 150,
+        onEnd: function () {
+          const newOrder = [];
+          document.querySelectorAll("#taskBody tr").forEach((row) => {
+            const id = parseInt(row.getAttribute("data-id"));
+            const task = tasks.find((t) => t.id === id);
+            if (task) newOrder.push(task);
+          });
+          tasks = newOrder;
+          localStorage.setItem("tasks", JSON.stringify(tasks));
+          renderTasks({ skipSort: true });
+          updateCounters();
+        },
+      });
     }
 
     function getSubjectColor(name) {
@@ -962,20 +1122,21 @@
         const daysDiff = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
 
         return `
-      <div class="side-task-card ${isToday ? "today-highlight" : ""
-          }" style="border-left: 6px solid ${color}">
-        <div class="task-title">${task.subject} - ${task.type}</div>
-        <div class="task-date">
-          ${formatDateWithoutYear(task.dueDate)} 
-          ${isToday
+  <div class="side-task-card ${isToday ? "today-highlight" : ""}"
+       style="border-left: 6px solid ${color}"
+       onclick="highlightTaskById(${task.id})">
+    <div class="task-title">${task.subject} - ${task.type}</div>
+    <div class="task-date">
+      ${formatDateWithoutYear(task.dueDate)} 
+      ${isToday
             ? "<span class='today-alert'>❗</span>"
-            : `<span class="due-in">${daysDiff} day${daysDiff !== 1 ? "s" : ""
-            } left</span>`
-          }
-        </div>
-      </div>
-    `;
+            : `<span class="due-in">${daysDiff} day${daysDiff !== 1 ? "s" : ""} left</span>`}
+    </div>
+  </div>
+`;
       }
+
+
 
       const urgent = tasks.filter(
         (t) => new Date(t.dueDate) < now && !t.completed
@@ -1027,6 +1188,17 @@
       const nextMonthDays = 7 - (lastDay.getDay() + 1);
       for (let i = 1; i <= nextMonthDays; i++) {
         createCalendarDay(new Date(year, month + 1, i), true);
+      }
+    }
+
+    function highlightTaskById(id) {
+      const row = document.querySelector(`tr[data-id='${id}']`);
+      if (row) {
+        row.classList.remove("highlight"); // reset if it was already highlighted
+        void row.offsetWidth; // force reflow to restart animation
+        row.classList.add("highlight");
+        row.scrollIntoView({ behavior: "smooth", block: "center" });
+        setTimeout(() => row.classList.remove("highlight"), 1200);
       }
     }
 
@@ -1122,12 +1294,47 @@
     function init() {
       renderSubjects();
       renderTypes();
-      renderTasks();
+      renderTasks({ skipSort: true }); 
       updateCounters();
     }
 
+    function exportTasks() {
+      const dataStr = JSON.stringify(tasks, null, 2);
+      const blob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "tasks.json";
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("Tasks exported");
+    }
+
+    function importTasks(event) {
+      const file = event.target.files[0];
+      if (!file) return showToast("No file selected");
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const importedTasks = JSON.parse(e.target.result);
+          if (!Array.isArray(importedTasks)) throw new Error("Invalid format");
+          tasks = importedTasks;
+          localStorage.setItem("tasks", JSON.stringify(tasks));
+          renderTasks();
+          updateCounters();
+          showToast("Tasks imported");
+        } catch (err) {
+          showToast("Invalid JSON file");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+
     init();
   </script>
+
 </body>
 
 </html>
